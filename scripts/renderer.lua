@@ -249,8 +249,8 @@ function renderer.draw(it, entity_data)
     local sett = settings.get_player_settings(it.player_index)
     if sett["pv-color-pumps"].value and not found_connections then
       local entity = entity_data.entity
-      if entity.valid and entity.fluids_count == 1 then
-        shape_fluid_system = it.systems[entity.get_fluid_segment_id(1) or "none"] or default_fluid_system
+      if entity.valid and entity.fluids_count == 1 and entity.has_fluid_segment(1) then
+        shape_fluid_system = it.systems[entity.get_fluid_segment_id(1)] or default_fluid_system
       end
     end
     entity_data.shape.color = shape_fluid_system.color
@@ -262,8 +262,8 @@ function renderer.draw(it, entity_data)
     local sett = settings.get_player_settings(it.player_index)
     if sett["pv-color-pumps"].value and not found_connections then
       local entity = entity_data.entity
-      if entity.valid and entity.fluids_count == 1 then
-        shape_fluid_system = it.systems[entity.get_fluid_segment_id(1) or "none"] or default_fluid_system
+      if entity.valid and entity.fluids_count == 1 and entity.has_fluid_segment(1) then
+        shape_fluid_system = it.systems[entity.get_fluid_segment_id(1)] or default_fluid_system
       end
     end
     entity_data.mapshape.color = shape_fluid_system.color

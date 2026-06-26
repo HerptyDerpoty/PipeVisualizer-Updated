@@ -101,9 +101,9 @@ local function request(entity, player_index, in_overlay, from_hover)
 
   local should_iterate = false
   for fluidbox_index = 1, entity.fluids_count do
-    local fluid_segment_id = entity.get_fluid_segment_id(fluidbox_index) or "none"
+    local fluid_segment_id = entity.has_fluid_segment(fluidbox_index) and entity.get_fluid_segment_id(fluidbox_index) or "none"
     local system = self.systems[fluid_segment_id]
-    if (not fluid_segment_id == "none") and system and not in_overlay then
+    if (fluid_segment_id ~= "none") and system and not in_overlay then
       goto continue
     end
 
@@ -118,7 +118,7 @@ local function request(entity, player_index, in_overlay, from_hover)
           order = self.next_color_index
         end
       else
-        if (not fluid_segment_id == "none") then
+        if (fluid_segment_id ~= "none") then
           local segment_fluid = entity.get_fluid_segment_fluid(fluidbox_index)
           if segment_fluid and segment_fluid.name then
             color = storage.fluid_colors[segment_fluid.name]
@@ -314,7 +314,7 @@ local function request_or_clear(entity, player_index)
   end
   for fluidbox_index = 1, entity.fluids_count do
     --- @cast fluidbox_index uint
-    local id = entity.get_fluid_segment_id(fluidbox_index) or "none"
+      local id = entity.has_fluid_segment(fluidbox_index) and entity.get_fluid_segment_id(fluidbox_index) or "none"
     if id and it.systems[id] then
       clear_system(it, id)
     end

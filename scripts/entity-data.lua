@@ -63,10 +63,10 @@ function entity_data.create(iterator, entity)
 
   for i = 1, entity.fluids_count do
     --- @cast i uint
-    local id = entity.get_fluid_segment_id(i)
-    if not id then
+    if not entity.has_fluid_segment(i) then
       goto continue
     end
+    local id = entity.get_fluid_segment_id(i)
     --- @type PipeConnectionExt
     local connections = entity.get_fluid_box_pipe_connections(i)
     for _, connection in pairs(connections) do
@@ -76,7 +76,7 @@ function entity_data.create(iterator, entity)
         y = connection.position.y + (connection.target_position.y - connection.position.y) / 2,
       }
       if connection.target then
-        connection.target_owner = connection.target.owner
+        connection.target_owner = connection.target
       end
     end
     data.connections[id] = connections
