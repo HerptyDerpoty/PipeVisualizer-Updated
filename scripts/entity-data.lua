@@ -13,24 +13,49 @@ local renderer = require("scripts.renderer")
 --- @field shape_position MapPosition
 --- @field target_owner LuaEntity?
 
---- Assumes that the positions are in exact cardinals.
---- @param connection PipeConnection
+--- @param from MapPosition
+--- @param to MapPosition
 --- @return defines.direction
-local function get_cardinal_direction(connection)
-  local from, to = connection.position, connection.target_position
-  if from.y > to.y then
-    return defines.direction.north
-  elseif from.x < to.x then
-    return defines.direction.east
-  elseif from.y < to.y then
-    return defines.direction.south
-  else
+local function get_cardinal_direction(from, to)
+  local dx = to.x - from.x
+  local dy = to.y - from.y
+
+  if math.abs(dx) > math.abs(dy) then
+    if dx > 0 then
+      return defines.direction.east
+    end
     return defines.direction.west
   end
+
+  if dy > 0 then
+    return defines.direction.south
+  end
+
+  return defines.direction.north
 end
 
 --- @class EntityDataModule
 local entity_data = {}
+
+--- @param entity LuaEntity
+--- @param fluidbox_index uint
+--- @param connections PipeConnectionExt[]
+--- @return FluidSystemID | "none"
+local function get_fluid_system_id(entity, fluidbox_index, connections)
+  if entity.has_fluid_segment(fluidbox_index) then
+    return entity.get_fluid_segment_id(fluidbox_index)
+  end
+
+  for _, connection in pairs(connections) do
+    local target = connection.target
+    local target_fluidbox_index = connection.target_fluidbox_index
+    if target and target_fluidbox_index and target.valid and target.has_fluid_segment(target_fluidbox_index) then
+      return target.get_fluid_segment_id(target_fluidbox_index)
+    end
+  end
+
+  return "none"
+end
 
 --- @param iterator Iterator
 --- @param entity LuaEntity
@@ -63,24 +88,27 @@ function entity_data.create(iterator, entity)
 
   for i = 1, entity.fluids_count do
     --- @cast i uint
-    if not entity.has_fluid_segment(i) then
-      goto continue
-    end
-    local id = entity.get_fluid_segment_id(i)
-    --- @type PipeConnectionExt
-    local connections = entity.get_fluid_box_pipe_connections(i)
+    local connections = entity.get_fluid_box_pipe_connections(i) or {}
+    --- @cast connections PipeConnectionExt[]
+    local id = get_fluid_system_id(entity, i, connections)
     for _, connection in pairs(connections) do
-      connection.direction = get_cardinal_direction(connection)
       connection.shape_position = {
         x = connection.position.x + (connection.target_position.x - connection.position.x) / 2,
         y = connection.position.y + (connection.target_position.y - connection.position.y) / 2,
       }
+      connection.direction = get_cardinal_direction(connection.position, connection.target_position)
       if connection.target then
         connection.target_owner = connection.target
       end
     end
-    data.connections[id] = connections
-    ::continue::
+    local existing_connections = data.connections[id]
+    if existing_connections then
+      for _, connection in pairs(connections) do
+        existing_connections[#existing_connections + 1] = connection
+      end
+    else
+      data.connections[id] = connections
+    end
   end
 
   iterator.entities[unit_number] = data

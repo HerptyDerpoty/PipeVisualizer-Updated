@@ -167,18 +167,20 @@ function renderer.draw(it, entity_data)
 
       local direction = connection.direction
       if is_complex_type then
-        if connection.flow_direction == "input" then
-          direction = (direction + 4) % 8 -- Opposite
-        end
         local sprite = "pv-fluid-arrow-" .. connection.flow_direction
-        if connection.flow_direction ~= "input-output" and ((not is_valid_pipe_entity(connection.target_owner)) or is_specific_complex_entity(connection.target_owner)) then --pipe_types[connection.target_owner.type] then
+        local orientation = connection.direction / direction_divisor
+        if connection.flow_direction == "input" then
+          sprite = "pv-fluid-arrow"
+          orientation = (orientation + 0.5) % 1
+        end
+        if connection.flow_direction ~= "input-output" and ((not is_valid_pipe_entity(connection.target_owner)) or is_specific_complex_entity(connection.target_owner)) then
           sprite = "pv-fluid-arrow"
         end
         objects[#objects + 1] = draw_sprite({
           sprite = sprite,
           tint = fluid_system_data.color,
           render_layer = layers.arrow,
-          orientation = direction / direction_divisor,
+          orientation = orientation,
           target = connection.shape_position,
           surface = entity_data.entity.surface_index,
           players = { it.player_index },
@@ -189,7 +191,7 @@ function renderer.draw(it, entity_data)
           render_layer = "arrow",
           y_scale = 4,
           x_scale = 4,
-          orientation = direction / direction_divisor,
+          orientation = orientation,
           target = connection.shape_position,
           surface = entity_data.entity.surface_index,
           players = { it.player_index },

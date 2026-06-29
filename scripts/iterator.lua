@@ -57,6 +57,43 @@ local function pop(iterator)
 end
 
 --- @param entity LuaEntity
+--- @param fluidbox_index uint
+--- @return FluidSystemID | "none", boolean has_direct_segment
+local function get_fluid_system_id(entity, fluidbox_index)
+  if entity.has_fluid_segment(fluidbox_index) then
+    return entity.get_fluid_segment_id(fluidbox_index), true
+  end
+
+  local connections = entity.get_fluid_box_pipe_connections(fluidbox_index) or {}
+  for _, connection in pairs(connections) do
+    local target = connection.target
+    local target_fluidbox_index = connection.target_fluidbox_index
+    if target and target_fluidbox_index and target.valid and target.has_fluid_segment(target_fluidbox_index) then
+      return target.get_fluid_segment_id(target_fluidbox_index), false
+    end
+  end
+
+  return "none", false
+end
+
+--- @param entity LuaEntity
+--- @param fluidbox_index uint
+--- @return Fluid?
+local function get_connected_segment_fluid(entity, fluidbox_index)
+  local connections = entity.get_fluid_box_pipe_connections(fluidbox_index) or {}
+  for _, connection in pairs(connections) do
+    local target = connection.target
+    local target_fluidbox_index = connection.target_fluidbox_index
+    if target and target_fluidbox_index and target.valid and target.has_fluid_segment(target_fluidbox_index) then
+      local segment_fluid = target.get_fluid_segment_fluid(target_fluidbox_index)
+      if segment_fluid and segment_fluid.name then
+        return segment_fluid
+      end
+    end
+  end
+end
+
+--- @param entity LuaEntity
 --- @param player_index PlayerIndex
 --- @param in_overlay boolean
 --- @param from_hover boolean?
@@ -101,7 +138,8 @@ local function request(entity, player_index, in_overlay, from_hover)
 
   local should_iterate = false
   for fluidbox_index = 1, entity.fluids_count do
-    local fluid_segment_id = entity.has_fluid_segment(fluidbox_index) and entity.get_fluid_segment_id(fluidbox_index) or "none"
+    --- @cast fluidbox_index uint
+    local fluid_segment_id, has_direct_segment = get_fluid_system_id(entity, fluidbox_index)
     local system = self.systems[fluid_segment_id]
     if (fluid_segment_id ~= "none") and system and not in_overlay then
       goto continue
@@ -118,14 +156,14 @@ local function request(entity, player_index, in_overlay, from_hover)
           order = self.next_color_index
         end
       else
-        if (fluid_segment_id ~= "none") then
+        if has_direct_segment then
           local segment_fluid = entity.get_fluid_segment_fluid(fluidbox_index)
           if segment_fluid and segment_fluid.name then
             color = storage.fluid_colors[segment_fluid.name]
             order = storage.fluid_order[segment_fluid.name]
           end
         else
-          local contents = entity.get_fluid(fluidbox_index)
+          local contents = entity.get_fluid(fluidbox_index) or get_connected_segment_fluid(entity, fluidbox_index)
           if contents and contents.name then
             color = storage.fluid_colors[contents.name]
             order = storage.fluid_order[contents.name]
@@ -314,7 +352,7 @@ local function request_or_clear(entity, player_index)
   end
   for fluidbox_index = 1, entity.fluids_count do
     --- @cast fluidbox_index uint
-      local id = entity.has_fluid_segment(fluidbox_index) and entity.get_fluid_segment_id(fluidbox_index) or "none"
+    local id = get_fluid_system_id(entity, fluidbox_index)
     if id and it.systems[id] then
       clear_system(it, id)
     end
